@@ -10,8 +10,16 @@ DEPS = $(shell ls ../src/*.[ch])
 SRC = $(shell ls *.c | sed 's/AllTests.c//')
 OBJ = $(SRC:.c=.o)
 
+ifndef DEBUG
+ALL_CFLAGS  = -DNDEBUG -g2 -O2
+else
+ALL_CFLAGS  = -DDEBUG -g3 -O1
+endif
+
+ALL_CFLAGS  += -fPIC -Wall -Wextra -ansi -pedantic
+ALL_CFLAGS  += $(CFLAGS)
+
 INCLUDE = -I../src
-CFLAGS  += -pipe -ansi -pedantic -Wall -Wextra -g
 LDFLAGS +=
 
 all: check
@@ -20,14 +28,14 @@ check: testrun
 	@./testrun
 
 testrun: AllTests.o $(OBJ)
-	$(QUIET_CC)$(CC) -o $@ AllTests.o $(OBJ) $(LDFLAGS)
+	$(QUIET_CC)$(CC) $(INCLUDE) $(CPPFLAGS) $(ALL_CFLAGS) $(OBJ) -o $@ AllTests.o
 
 AllTests.o: $(OBJ)
 	$(QUIET_MAKE_TESTS)./make-tests.sh > AllTests.c
-	$(QUIET_CC)$(CC) -c -o AllTests.o AllTests.c $(CFLAGS) $(INCLUDE)
+	$(QUIET_CC)$(CC) $(INCLUDE) $(CPPFLAGS) $(ALL_CFLAGS) -c -o AllTests.o AllTests.c
 
 %.o: %.c $(DEPS)
-	$(QUIET_CC)$(CC) -c -o $@ $< $(CFLAGS) $(INCLUDE)
+	$(QUIET_CC)$(CC) $(INCLUDE) $(CPPFLAGS) $(ALL_CFLAGS) -c -o $@ $<
 
 clean veryclean:
 	rm -rf AllTests.c

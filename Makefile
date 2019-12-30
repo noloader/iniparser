@@ -6,20 +6,20 @@
 # Compiler settings
 CC      ?= gcc
 
-CFLAGS  += -fPIC -Wall -Wextra -ansi -pedantic
 ifndef DEBUG
-ADDITIONAL_CFLAGS  ?= -O2
+ALL_CFLAGS  = -DNDEBUG -g2 -O2
 else
-ADDITIONAL_CFLAGS  ?= -g
+ALL_CFLAGS  = -DDEBUG -g3 -O1
 endif
 
-CFLAGS += ${ADDITIONAL_CFLAGS}
+ALL_CFLAGS  += -fPIC -Wall -Wextra -ansi -pedantic
+ALL_CFLAGS  += $(CFLAGS)
 
 # Ar settings to build the library
 AR	    ?= ar
 ARFLAGS = rcv
 
-SHLD = ${CC} ${CFLAGS}
+SHLD = $(CC) $(ALL_CFLAGS)
 LDSHFLAGS = -shared -Wl,-Bsymbolic
 LDFLAGS += -Wl,-rpath -Wl,/usr/lib -Wl,-rpath,/usr/lib
 
@@ -37,34 +37,27 @@ RM      ?= rm -f
 
 SUFFIXES = .o .c .h .a .so .sl
 
-COMPILE.c	?= $(CC) $(CFLAGS) $(CPPFLAGS) $(TARGET_ARCH) -c
-
 ifndef V
-QUIET_AR	= @echo "AR	$@";
-QUIET_CC	= @echo "CC	$@";
-QUIET_LINK	= @echo "LINK	$@";
-QUIET_RANLIB	= @echo "RANLIB	$@";
+QUIET_AR      = @echo "AR	$@";
+QUIET_CC      = @echo "CC	$@";
+QUIET_LINK    = @echo "LINK	$@";
+QUIET_RANLIB  = @echo "RANLIB	$@";
 endif
-
-.c.o:
-	$(QUIET_CC)$(COMPILE.c) $(OUTPUT_OPTION) $<
-
 
 SRCS = src/iniparser.c \
 	   src/dictionary.c
 
-OBJS = $(SRCS:.c=.o)
-
+OBJS = src/iniparser.o \
+	   src/dictionary.o
 
 default:	libiniparser.a $(SO_TARGET)
 
 libiniparser.a:	$(OBJS)
-	$(QUIET_AR)$(AR) $(ARFLAGS) $@ $^
+	$(QUIET_AR)$(AR) $(ARFLAGS) $@ $(subst src/,,$(OBJS))
 	$(QUIET_RANLIB)$(RANLIB) $@
 
-$(SO_TARGET):	$(OBJS)
-	$(QUIET_LINK)$(SHLD) $(LDSHFLAGS) $(LDFLAGS) -o $(SO_TARGET) $(OBJS) \
-		-Wl,-soname=`basename $(SO_TARGET)`
+$(SO_TARGET): $(OBJS)
+	$(QUIET_LINK)$(SHLD) $(LDSHFLAGS) $(LDFLAGS) -o $(SO_TARGET) $(subst src/,,$(OBJS)) -Wl,-soname=`basename $(SO_TARGET)`
 
 clean:
 	$(RM) $(OBJS)
@@ -78,9 +71,12 @@ veryclean:
 
 docs:
 	@(cd doc ; $(MAKE))
-	
+
 check: $(SO_TARGET)
 	@(cd test ; $(MAKE))
 
 example: libiniparser.a
 	@(cd example ; $(MAKE))	
+
+.c.o:
+	$(QUIET_CC)$(CC) $(CPPFLAGS) $(ALL_CFLAGS) $(TARGET_ARCH) -c $<
